@@ -9,12 +9,6 @@ We will now have branches for the stable releases:
 - Release-3.7
 - etc.
 
-Bookmark [aka.ms/OpenShift](http://aka.ms/OpenShift) for future reference.
-
-For the **OpenShift Container Platform** refer to https://github.com/Microsoft/openshift-container-platform
-
-Change log located in CHANGELOG.md
-
 ## OpenShift Origin 3.7 with Username / Password
 
 Due to some issues, this template does not enable the Service Catalog or the Template Service Broker.  We will enable this in a future update once the issue is resolved.
@@ -34,8 +28,6 @@ This template deploys OpenShift Origin with basic username / password for authen
 |Network Security Groups|1 Network Security Group Master VMs<br />1 Network Security Group for Infra VMs<br />1 Network Security Group for Node VMs  |
 |Availability Sets      |1 Availability Set for Master VMs<br />1 Availability Set for Infra VMs<br />1 Availability Set for Node VMs  |
 |Virtual Machines   	|3 or 5 Masters. First Master is used to run Ansible Playbook to install OpenShift<br />2 or 3 Infra nodes<br />User-defined number of Nodes (1 to 30)<br />All VMs include a single attached data disk for Docker thin pool logical volume|
-
-If you have a Red Hat subscription and would like to deploy an OpenShift Container Platform (formerly OpenShift Enterprise) cluster, please visit: https://github.com/Microsoft/openshift-container-platform
 
 ## READ the instructions in its entirety before deploying!
 
@@ -137,7 +129,7 @@ The appId is used for the aadClientId parameter.
 
 ## Deploy Template
 
-<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2FMicrosoft%2Fopenshift-origin%2Fmaster%2Fazuredeploy.json" target="_blank"><img src="http://azuredeploy.net/deploybutton.png"/></a>
+<a href="https://portal.azure.com/#create/Microsoft.Template/uri/https%3A%2F%2Fraw.githubusercontent.com%2Fnabbdl%2Fopenshift-origin%2Fmaster%2Fazuredeploy.json" target="_blank"><img src="http://azuredeploy.net/deploybutton.png"/></a>
 
 Once you have collected all of the prerequisites for the template, you can deploy the template by populating the *azuredeploy.parameters.local.json* file and executing Resource Manager deployment commands with PowerShell or the CLI.
 
