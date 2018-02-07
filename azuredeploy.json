@@ -8,7 +8,7 @@
 				"description": "The base URL where artifacts required by this template are located. When the template is deployed using the accompanying scripts, a private location in the subscription will be used and this value will be automatically generated.",
 				"artifactsBaseUrl": ""
 			},
-			"defaultValue": "https://raw.githubusercontent.com/Microsoft/openshift-origin/master"
+			"defaultValue": "https://https://raw.githubusercontent.com/nabbdl/openshift-origin/master/"
 		},
 		"masterVmSize": {
 			"type": "string",
@@ -92,13 +92,27 @@
 		},
 		"openshiftClusterPrefix": {
 			"type": "string",
-			"defaultValue": "mycluster",
+			"defaultValue": "oc",
 			"minLength": 2,
 			"maxLength": 20,
 			"metadata": {
 				"description": "OpenShift cluster prefix.  Used to generate master, infra and node hostnames.  Maximum of 20 characters."
 			}
 		},
+		"openshiftMasterPublicIpDnsLabel": {
+                        "type": "string",
+                        "minLength": 1,
+                        "metadata": {
+                                "description": "OpenShift Master Load Balancer public IP DNS name (hostname portion). Must be lowercase. It should match with the following regular expression: ^[a-z][a-z0-9-]{1,61}[a-z0-9]$ or it will raise an error."
+                        }
+                },
+                "infraLbPublicIpDnsLabel": {
+                        "type": "string",
+                        "minLength": 1,
+                        "metadata": {
+                                "description": "OpenShift Infra Nodes Load Balancer public IP DNS name (hostname portion). Must be lowercase. It should match with the following regular expression: ^[a-z][a-z0-9-]{1,61}[a-z0-9]$ or it will raise an error."
+                        }
+                },
 		"masterInstanceCount": {
 			"type": "int",
 			"defaultValue": 3,
