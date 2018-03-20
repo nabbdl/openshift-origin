@@ -6,13 +6,13 @@
 			"value": "https://raw.githubusercontent.com/Microsoft/openshift-origin/master/"
 		},
 		"masterVmSize": {
-			"value": "Standard_DS2_v2"
+			"value": "Standard_DS3_v2"
 		},
 		"infraVmSize": {
-			"value": "Standard_DS2_v2"
+			"value": "Standard_DS3_v2"
 		},
 		"nodeVmSize": {
-			"value": "Standard_DS2_v2"
+			"value": "Standard_DS3_v2"
 		},
 		"openshiftClusterPrefix": {
 			"value": "changeme"
