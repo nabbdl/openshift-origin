@@ -18,10 +18,10 @@
 			"value": "changeme"
 		},
 		"openshiftMasterPublicIpDnsLabel": {
-            		"value": "ocmast"
+            		"value": "changeme"
         	},
         	"infraLbPublicIpDnsLabel": {
-            		"value": "ocinfra"
+            		"value": "changeme"
         	},
 		"masterInstanceCount": {
 			"value": 3
