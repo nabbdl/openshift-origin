@@ -17,6 +17,12 @@
 		"openshiftClusterPrefix": {
 			"value": "changeme"
 		},
+		"openshiftMasterPublicIpDnsLabel": {
+            		"value": "ocmast"
+        	},
+        	"infraLbPublicIpDnsLabel": {
+            		"value": "ocinfra"
+        	},
 		"masterInstanceCount": {
 			"value": 3
 		},
