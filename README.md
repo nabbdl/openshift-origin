@@ -116,7 +116,6 @@ The appId is used for the aadClientId parameter.
 11. openshiftPassword: Password for OpenShift login
 11. enableMetrics: Enable Metrics - value is either "true" or "false"
 11. enableLogging: Enable Logging - value is either "true" or "false"
-11. enableCockpit: Enable Cockpit - value is either "true" or "false"
 12. sshPublicKey: Copy your SSH Public Key here
 14. keyVaultResourceGroup: The name of the Resource Group that contains the Key Vault
 15. keyVaultName: The name of the Key Vault you created
