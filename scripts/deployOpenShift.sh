@@ -106,20 +106,6 @@ cat > /home/${SUDOUSER}/assignclusteradminrights.yml <<EOF
     shell: "oadm policy add-cluster-role-to-user cluster-admin {{ lookup('env','SUDOUSER') }} --config=/etc/origin/master/admin.kubeconfig"
 EOF
 
-# Run on all nodes - Set Root password on all nodes
-
-cat > /home/${SUDOUSER}/assignrootpassword.yml <<EOF
----
-- hosts: nodes
-  gather_facts: no
-  become: yes
-  become_method: sudo
-  vars:
-    description: "Set password for Cockpit"
-  tasks:
-  - name: configure Cockpit password
-    shell: echo \"{{ lookup('env','PASSWORD') }}\"|passwd root --stdin
-EOF
 
 # Run on MASTER-0 node - configure registry to use Azure Storage
 # Create docker registry config based on Commercial Azure or Azure Government
@@ -140,6 +126,8 @@ cat > /home/${SUDOUSER}/dockerregistry.yml <<EOF
     shell: oc env dc docker-registry -e REGISTRY_STORAGE=azure -e REGISTRY_STORAGE_AZURE_ACCOUNTNAME=$REGISTRYSA -e REGISTRY_STORAGE_AZURE_ACCOUNTKEY=$ACCOUNTKEY -e REGISTRY_STORAGE_AZURE_CONTAINER=registry -e REGISTRY_STORAGE_AZURE_REALM=core.usgovcloudapi.net
 EOF
 
+export CLOUDNAME="AzureUSGovernmentCloud"
+
 else
 
 cat > /home/${SUDOUSER}/dockerregistry.yml <<EOF
@@ -154,6 +142,8 @@ cat > /home/${SUDOUSER}/dockerregistry.yml <<EOF
   - name: Configure docker-registry to use Azure Storage
     shell: oc env dc docker-registry -e REGISTRY_STORAGE=azure -e REGISTRY_STORAGE_AZURE_ACCOUNTNAME=$REGISTRYSA -e REGISTRY_STORAGE_AZURE_ACCOUNTKEY=$ACCOUNTKEY -e REGISTRY_STORAGE_AZURE_CONTAINER=registry
 EOF
+
+export CLOUDNAME="AzurePublicCloud"
 
 fi
 
@@ -243,7 +233,8 @@ cat > /home/${SUDOUSER}/setup-azure-master.yml <<EOF
           "subscriptionId": "{{ lookup('env','SUBSCRIPTIONID') }}",
           "tenantId": "{{ lookup('env','TENANTID') }}",
           "resourceGroup": "{{ lookup('env','RESOURCEGROUP') }}",
-          "location": "{{ lookup('env','LOCATION') }}"
+          "location": "{{ lookup('env','LOCATION') }}",
+          "cloud": "{{ lookup('env','CLOUDNAME') }}"
         } 
     notify:
     - restart origin-master-api
@@ -309,7 +300,8 @@ cat > /home/${SUDOUSER}/setup-azure-node-master.yml <<EOF
           "subscriptionId": "{{ lookup('env','SUBSCRIPTIONID') }}",
           "tenantId": "{{ lookup('env','TENANTID') }}",
           "resourceGroup": "{{ lookup('env','RESOURCEGROUP') }}",
-          "location": "{{ lookup('env','LOCATION') }}"
+          "location": "{{ lookup('env','LOCATION') }}",
+          "cloud": "{{ lookup('env','CLOUDNAME') }}"
         } 
     notify:
     - restart origin-node
@@ -364,7 +356,8 @@ cat > /home/${SUDOUSER}/setup-azure-node.yml <<EOF
           "subscriptionId": "{{ lookup('env','SUBSCRIPTIONID') }}",
           "tenantId": "{{ lookup('env','TENANTID') }}",
           "resourceGroup": "{{ lookup('env','RESOURCEGROUP') }}",
-          "location": "{{ lookup('env','LOCATION') }}"
+          "location": "{{ lookup('env','LOCATION') }}",
+          "cloud": "{{ lookup('env','CLOUDNAME') }}"
         } 
     notify:
     - restart origin-node
@@ -440,9 +433,9 @@ openshift_master_cluster_public_vip=$MASTERPUBLICIPADDRESS
 openshift_master_identity_providers=[{'name': 'htpasswd_auth', 'login': 'true', 'challenge': 'true', 'kind': 'HTPasswdPasswordIdentityProvider', 'filename': '/etc/origin/master/htpasswd'}]
 
 # Enable service catalog
-openshift_enable_service_catalog=false
+# openshift_enable_service_catalog=false
 # Enable template service broker (requires service catalog to be enabled, above)
-template_service_broker_install=false
+# template_service_broker_install=false
 # Configure one of more namespaces whose templates will be served by the TSB
 openshift_template_service_broker_namespaces=['openshift']
 # Disable the OpenShift SDN plugin
@@ -495,7 +488,7 @@ done
 
 for (( c=0; c<$INFRACOUNT; c++ ))
 do
-  echo "$INFRA-$c openshift_node_labels=\"{'type': 'infra', 'zone': 'default'}\" openshift_hostname=$INFRA-$c" >> /etc/ansible/hosts
+  echo "$INFRA-$c openshift_node_labels=\"{'type': 'infra', 'zone': 'default', 'region': 'infra'}\" openshift_hostname=$INFRA-$c" >> /etc/ansible/hosts
 done
 
 # Loop to add Nodes
@@ -554,15 +547,6 @@ runuser $SUDOUSER -c "ansible-playbook ~/addocpuser.yml"
 echo $(date) "- Assigning cluster admin rights to user"
 
 runuser $SUDOUSER -c "ansible-playbook ~/assignclusteradminrights.yml"
-
-if [[ $COCKPIT == "true" ]]
-then
-
-# Setting password for root if Cockpit is enabled
-echo $(date) "- Assigning password for root, which is used to login to Cockpit"
-
-runuser $SUDOUSER -c "ansible-playbook ~/assignrootpassword.yml"
-fi
 
 # Configure Docker Registry to use Azure Storage Account
 echo $(date) "- Configuring Docker Registry to use Azure Storage Account"
@@ -637,15 +621,19 @@ then
 	
 	echo $(date) "- Sleep for 20"
 	
-	sleep 20	
+	sleep 20
+	runuser -l $SUDOUSER -c  "oc label nodes $MASTER-0 openshift-infra=apiserver --overwrite=true"	
 	runuser -l $SUDOUSER -c  "oc label nodes --all logging-infra-fluentd=true logging=true"
 
 	runuser -l $SUDOUSER -c  "ansible all -b  -m service -a 'name=openvswitch state=restarted' "
 
-	echo $(date) "- Restarting origin nodes after 20 seconds    "
+	echo $(date) "- Restarting origin nodes after 20 seconds"
 	sleep 20
 
 	runuser -l $SUDOUSER -c  "ansible nodes -b  -m service -a 'name=origin-node state=restarted' "
+	sleep 10
+	runuser -l $SUDOUSER -c "oc rollout latest dc/asb -n openshift-ansible-service-broker"
+	runuser -l $SUDOUSER -c "oc rollout latest dc/asb-etcd -n openshift-ansible-service-broker"
 
 fi
 
@@ -653,13 +641,15 @@ fi
 
 if [ $METRICS == "true" ]
 then
-	sleep 30
+	sleep 30	
+	echo $(date) "- Determining Origin version from rpm"
+	OO_VERSION=$(rpm -q origin | cut -d'-' -f 2)	
 	echo $(date) "- Deploying Metrics"
 	if [ $AZURE == "true" ]
 	then
-		runuser -l $SUDOUSER -c "ansible-playbook /home/$SUDOUSER/openshift-ansible/playbooks/byo/openshift-cluster/openshift-metrics.yml -e openshift_metrics_install_metrics=True -e openshift_metrics_cassandra_storage_type=dynamic"
+		runuser -l $SUDOUSER -c "ansible-playbook /home/$SUDOUSER/openshift-ansible/playbooks/byo/openshift-cluster/openshift-metrics.yml -e openshift_metrics_install_metrics=True -e openshift_metrics_cassandra_storage_type=dynamic -e openshift_hosted_metrics_deployer_version=$OO_VERSION"
 	else
-		runuser -l $SUDOUSER -c "ansible-playbook /home/$SUDOUSER/openshift-ansible/playbooks/byo/openshift-cluster/openshift-metrics.yml -e openshift_metrics_install_metrics=True"
+		runuser -l $SUDOUSER -c "ansible-playbook /home/$SUDOUSER/openshift-ansible/playbooks/byo/openshift-cluster/openshift-metrics.yml -e openshift_metrics_install_metrics=True -e openshift_hosted_metrics_deployer_version=$OO_VERSION"
 	fi
 	if [ $? -eq 0 ]
 	then
@@ -697,7 +687,6 @@ echo $(date) "- Deleting post installation files"
 rm /home/${SUDOUSER}/addocpuser.yml
 rm /home/${SUDOUSER}/assignclusteradminrights.yml
 rm /home/${SUDOUSER}/dockerregistry.yml
-rm /home/${SUDOUSER}/assignrootpassword.yml
 rm /home/${SUDOUSER}/setup-azure-master.yml
 rm /home/${SUDOUSER}/setup-azure-node-master.yml
 rm /home/${SUDOUSER}/setup-azure-node.yml
